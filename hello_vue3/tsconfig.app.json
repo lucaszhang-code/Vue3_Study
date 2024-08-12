@@ -1,0 +1,19 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "include": ["env.d.ts",
+    "备份/03_setup概述/**/*",
+    "备份/03_setup概述/**/*.vue"
+  ],
+  "exclude": [
+    "备份/03_setup概述/**/__tests__/*"
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
