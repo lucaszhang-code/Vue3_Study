@@ -866,3 +866,280 @@ watch([() => person.name, () => person.car.c1], (newValue, oldValue) => {
 - **基本类型的 `ref`**：`newValue` 和 `oldValue` 在值变化时不同。
 - **对象类型的 `ref`**：修改对象属性不会改变引用，`newValue` 和 `oldValue` 相同；重新赋值对象时不同。
 - **`reactive`**：修改对象属性不会改变引用，`newValue` 和 `oldValue` 相同；重新赋值对象时不同。值得说明的一点是在`reactive`的情况下对象赋值只能通过`assign`的方式，因此`newValue` 和 `oldValue`一定相同
+
+## 第四天
+
+### `watchEffect`
+
+在很多时候我们需要同时监视多个数据，因此可以使用`watch`配合数组进行监视
+
+在下面的代码中，我们定义了`tmp`和`height`两个变量，有两个函数可以更新他的值，如果`tmp >= 60`或`height >= 80`时会返回字符串
+
+```ts
+// 数据
+let tmp = ref(10)
+let height = ref(0)
+
+// 方法
+function changeSum() {
+  tmp.value += 10
+}
+
+function changeHeight() {
+  height.value += 10
+}
+
+// watch实现
+watch([tmp, height], (value) => {
+  // console.log(value)
+  let [newTmp, newHeight] = value // 从value中获取最新的水温水位
+  if (newTmp >= 60 || newHeight >= 80) {
+    console.log('给服务器发请求')
+  } else console.log(newTmp, newHeight)
+})
+```
+
+但是如果此时我们无需监视`height`，我们需要分别将与`height`有关的代码全部删除，这不利于维护，因此我们可以使用`watchEffect`代替`watch`
+
+`watchEffect`会监控需要监控的全部数据，无需程序员手动维护监控
+
+```ts
+// 监视 --watchEffect实现
+watchEffect(()=>{
+  if(tmp.value >= 60 || height.value >= 80) {
+    console.log('给服务发送请求')
+  }
+})
+```
+
+### 标签`ref`
+
+如果此时有多个组件，我们需要获取某一个组件里面的`div`标签，以往我们会使用`class`或`id`获取，但是在Vue中，如果多个组件都存在id相同的标签那么会将他们一并获取，这不利于我们准确获取标签
+
+例如我们要获取`h2`标签，只需为他添加`ref`
+
+```html
+<h2 ref="beijing">北京</h2>
+```
+并且设置变量接收
+
+```ts
+let beijing = ref()
+```
+
+使用`.value`就可以精确获取标签
+
+```ts
+console.log(beijing.value)
+```
+
+### TS中的接口、泛型、自定义类型
+
+此时有一个对象`person`，里面包含一些数据,加入此时我的`name`写错了，或者`id`传入了`number`，编译器是不会有报错提示的（个别）
+
+```ts
+let person = {
+    id: '12321',
+    name: '张三',
+    age: 60
+  }
+```
+
+为了进一步规范和约束数据，我们在src文件夹中新建types文件夹，并且创建一个`index.ts`文件，专门用于编写接口文件
+
+```ts
+// 定义一个接口用于限制person对象的具体属性
+export interface PersonInter {
+    id: string,
+    name: string,
+    age: number
+}
+```
+
+使用时需要先引入文件
+
+```ts
+import {type PersonInter} from '@/types'
+
+let person : PersonInter = {
+    id: '12321',
+    name: '张三',
+    age: 60
+}
+
+```
+
+但是如果我们是数组包对象
+
+```ts
+// 第一种写法
+let person : Array<PersonInter> =[
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  },
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  }
+]
+
+// 第二种写法
+let person : PersonInter[] = [
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  },
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  }
+]
+
+// 第三种写法
+let person = <PersonInter[]> [
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  },
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  }
+]
+
+// 第四种写法
+let person = <Array<PersonInter>> [
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  },
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  }
+]
+```
+
+当然我们也可以定义数组包对象的接口
+
+```ts
+// 第一种
+export type PersonList = Array<PersonInter>
+// 第二种
+export type PersonList = PersonInter[]
+```
+
+使用方法
+
+```ts
+import {type PersonList} from '@/types'
+
+let person = <PersonList> reactive([
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  },
+  {
+    id: '12321',
+    name: '张三',
+    age: 60
+  }
+])
+```
+
+### `props`的使用
+
+很多时候我们需要进行组件间的数据沟通，比如父组件的数据给子组件
+
+`a = "哈哈"`是将字符串传递给`Person`组件，`:list = "personList"`是将数组传递给子组件；注意，`:list`其实是`v-bind-list`的简写,主要用于传递表达式，而`list`是传递数据的名字
+
+```vue
+<script lang="ts" setup name=App>
+import Person from "./components/Person.vue";
+import {type PersonList} from "./types";
+import {reactive} from "vue";
+
+let personList = reactive<PersonList>([
+  {
+    id: '0',
+    name: '张三',
+    age: 18
+  },
+  {
+    id: '1',
+    name: '李四',
+    age: 20
+  }]
+)
+
+</script>
+
+<template>
+  <div class="app">
+    <Person a="哈哈" :list = "personList"></Person>
+  </div>
+
+</template>
+```
+
+子组件接收
+
+```ts
+// 只接收
+defineProps(['a', 'list'])
+```
+
+在模版中可以正常使用
+
+```vue
+<template>
+  <div class="person">
+    <ul>
+      <li v-for="person in list" :key="person.id">
+        姓名:{{ person.name }}
+        年龄:{{ person.age }}
+      </li>
+    </ul>
+  </div>
+</template>
+```
+
+但是如果只看模版，你无法知道`list`是自定义的数据还是父组件传递的数据
+
+```ts
+// 接收a,同时将props保存起来
+let x = defineProps(['a', 'list'])
+```
+
+我们也可以限制传入的数据类型，防止父组件失误将错误的数据传给我们
+
+```ts
+// 接收list+限制类型
+defineProps<{ list: PersonList }>()
+```
+
+但是如果父组件传递错误数据，模版根本不会渲染，会导致相应部分空白，这也是不好的，因此我们可以自定义默认数据
+
+注意：指定的`list`应为函数对象
+
+```ts
+// 接收list+限制类型+限制必要性+指定默认值
+withDefaults(defineProps<{ list?: PersonList }>(), {
+  list: () => [{
+    id: '001',
+    name: '康师傅',
+    age: 100
+  }]
+})
+```
+

@@ -16,7 +16,6 @@ let personList = reactive<PersonList>([
   }]
 )
 
-
 </script>
 
 <template>
