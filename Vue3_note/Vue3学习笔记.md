@@ -935,7 +935,7 @@ console.log(beijing.value)
 
 ### TS中的接口、泛型、自定义类型
 
-此时有一个对象`person`，里面包含一些数据,加入此时我的`name`写错了，或者`id`传入了`number`，编译器是不会有报错提示的（个别）
+此时有一个对象`person`，里面包含一些数据,假如此时我的`name`写错了，或者`id`传入了`number`，编译器是不会有报错提示的（个别）
 
 ```ts
 let person = {
@@ -1142,4 +1142,273 @@ withDefaults(defineProps<{ list?: PersonList }>(), {
   }]
 })
 ```
+
+## 第五天
+
+### 对生命周期的理解
+
+一个人在世界上大致可以分为四个阶段：“被创造”，“出生”，“经历”，“死亡”；而我们的组件也可以分为四个阶段：“被创建”，“挂载”，“更新”，“销毁”
+
+| 时刻 | 调用特定的函数 |
+| ---- | -------------- |
+| 创建 | created        |
+| 挂载 | mounted        |
+| 更新 | updated        |
+| 销毁 | destroyed      |
+
+### Vue2的生命周期
+
+```vue
+<template>
+	<div>
+        <h2>当前求和为：{{sum}}</h2>
+        <button @click="add">点我+1</button>
+    </div>
+</template>
+
+<script>
+	export default {
+        name:'Person',
+        data(){
+            return {
+                sum : 1
+            }
+        },
+        methods:{
+            add(){
+                this.sum++
+            }
+        },
+        beforeCreated(){
+            console.log('创建前')
+        },
+        created(){
+            console.log('创建完毕')
+        },
+        beforeMounted(){
+            console.log('挂载之前')
+        },
+        mounted(){
+            console.log('挂载完毕')
+        },
+        beforeUpdate(){
+            console.log('更新前')
+        },
+        updated(){
+            console.log('更新完毕')
+        }，
+        beforeDestroyed(){
+            console.log('销毁前')
+        },
+        destroyed(){
+            console.log('销毁完毕')
+        }
+    }
+</script>
+
+<style>
+
+</style>
+```
+
+`beforeCreate`、`created`、`beforeMounte`、`mounted`在一个组件的生命周期只会调用一次，当组件的数据发生变化时，才会调用`beforeUpdate`、`updated`函数
+
+### Vue3的生命周期
+
+对于Vue3而言，由于`setup`的存在，无需使用`beforeCreate`和`created`，其余的生命周期均以函数的形式存在，并且需要`import`引入，所有生命周期前面加上`on`关键字
+
+注意`beforeDestroy`和`destroyed`在Vue3里面是`onBeforeUnmount`和`onUnmounted`
+
+```vue
+<script lang="ts" setup name="Person">
+import {ref, onBeforeMount, onMounted, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted} from 'vue';
+
+let sum = ref(0)
+
+function add() {
+  sum.value++
+}
+
+// 创建
+console.log('创建')
+
+// 挂载
+onBeforeMount(() => {
+  console.log('挂载前')
+})
+
+onMounted(() => {
+  console.log('挂载完毕')
+})
+
+onBeforeUpdate(() => {
+  console.log('更新前')
+})
+
+onUpdated(() => {
+  console.log('更新完毕')
+})
+
+onBeforeUnmount(() => {
+  console.log('卸载前')
+})
+
+onUnmounted(() => {
+  console.log('卸载后')
+})
+
+</script>
+
+<template>
+  <div class="person">
+    <h2>当前求和为：{{ sum }}</h2>
+    <button @click="add">点我+1</button>
+  </div>
+</template>
+
+
+<style scoped>
+.person {
+  background-color: skyblue;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.15);
+}
+</style>
+```
+
+### 父子组件的创建顺序
+
+在Vue项目中通常只会存在一个`.html`文件，通过
+
+```ts
+<script type="module" src="/src/main.ts"></script>
+```
+
+将`main.ts`文件引入，而`main.ts`文件内又是通过
+
+```ts
+import App from "./App.vue";
+```
+
+所以此时`App.vue`是根组件，代码从上往下执行，当执行到组件时，他会将组件一一解析完毕后才会渲染`App.vue`
+
+因此Vue优先创建子组件，再创建父组件;所以`App.vue`是最后挂载的
+
+### 自定义`hook`
+
+在Vue3中，如果我们将所有的数据、函数、计算属性、钩子函数全部写一起，也很混乱，我们可以分别将一些内容进行封装，比如下面是点击加号`sum`加一，点击切换图片按钮，增加狗狗图片的案例
+
+```ts
+<script lang="ts" setup name="Person">
+import <ref, reactive, computed> from 'vue'
+let sum = ref(0)
+let bigSum = computed(() => {
+     return sum.value * 10;
+ })
+ 
+  let dogList = reactive([
+     'https://images.dog.ceo/breeds/pembroke/n02113023_4373.jpg'
+ ])
+
+ function add() {
+     sum.value++
+ }
+
+ async function getDog() {
+     try {
+         let result = await axios.get('https://dog.ceo/api/breed/pembroke/images/random')
+         console.log(result.data.message)
+         dogList.push(result.data.message)
+     } catch (error) {
+         alert(error)
+     }
+ }
+</script>
+
+<template>
+  <div class="person">
+    <h2>当前求和为：{{ sum }}, 放大十倍后{{bigSum}}</h2>
+    <button @click="add">点我+1</button>
+    <hr>
+    <img v-for="(dog, index) in dogList" :src="dog" :key="index" alt="">
+    <hr>
+    <button @click="getDog">再来一只小狗</button>
+  </div>
+</template>
+```
+
+我们可以创建`hooks`文件夹，并且将sum++和狗狗图片图片切换的数据和方法封装到一起
+
+<img src="./assets/hooks文件夹.png" style="zoom:50%;" />
+
+将封装的内容用函数包裹起来
+
+export部分暴露函数需要写名称，export default完全暴露不需要
+
+需要将数据和方法返回出去
+
+```ts
+// useDogs.ts
+import {computed, ref} from "vue";
+
+export function useSum() {
+    let sum = ref(0)
+    let bigSum = computed(() => {
+        return sum.value * 10;
+    })
+
+    function add() {
+        sum.value++
+    }
+
+    return {sum, add, bigSum}
+}
+```
+
+```ts
+// useDogs.ts
+import {reactive, onMounted} from "vue";
+import axios from "axios";
+
+export function useDogs() {
+
+    let dogList = reactive([
+        'https://images.dog.ceo/breeds/pembroke/n02113023_4373.jpg'
+    ])
+
+    async function getDog() {
+        try {
+            let result = await axios.get('https://dog.ceo/api/breed/pembroke/images/random')
+            console.log(result.data.message)
+            dogList.push(result.data.message)
+        } catch (error) {
+            alert(error)
+        }
+    }
+
+    onMounted(() => {
+        getDog()
+    })
+
+    // 向外提供数据
+    return {dogList, getDog}
+}
+
+```
+
+在`App.vue`仅需调用就可以了
+
+```vue
+<script lang="ts" setup name="Person">
+import {useDogs} from "../hooks/useDogs";
+import {useSum} from "../hooks/useSum";
+
+const {sum, add, bigSum} = useSum()
+const {dogList, getDog} = useDogs()
+
+</script>
+```
+
+
 

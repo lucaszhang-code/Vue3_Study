@@ -1,38 +1,21 @@
 <script lang="ts" setup name="Person">
-import {defineProps, withDefaults} from 'vue';
-import {ref} from 'vue';
-import {type PersonList} from "../types";
+import {useDogs} from "../hooks/useDogs";
+import {useSum} from "../hooks/useSum";
 
-// 只接收
-// defineProps(['a', 'list'])
-
-// 接收a,同时将props保存起来
-// let x = defineProps(['a', 'list'])
-// console.log(x)
-
-// 接收list+限制类型
-defineProps<{ list: PersonList }>()
-
-// 接收list+限制类型+限制必要性+指定默认值
-withDefaults(defineProps<{ list?: PersonList }>(), {
-  list: () => [{
-    id: '001',
-    name: '康师傅',
-    age: 100
-  }]
-})
+const {sum, add, bigSum} = useSum()
+const {dogList, getDog} = useDogs()
 
 
 </script>
 
 <template>
   <div class="person">
-    <ul>
-      <li v-for="person in list" :key="person.id">
-        姓名:{{ person.name }}
-        年龄:{{ person.age }}
-      </li>
-    </ul>
+    <h2>当前求和为：{{ sum }}, 放大十倍后{{bigSum}}</h2>
+    <button @click="add">点我+1</button>
+    <hr>
+    <img v-for="(dog, index) in dogList" :src="dog" :key="index" alt="">
+    <hr>
+    <button @click="getDog">再来一只小狗</button>
   </div>
 </template>
 
@@ -43,5 +26,10 @@ withDefaults(defineProps<{ list?: PersonList }>(), {
   border-radius: 10px;
   padding: 10px;
   box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+img {
+  width: 100px;
+  margin: 10px;
 }
 </style>
