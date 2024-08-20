@@ -1338,7 +1338,7 @@ let bigSum = computed(() => {
 </template>
 ```
 
-我们可以创建`hooks`文件夹，并且将sum++和狗狗图片图片切换的数据和方法封装到一起
+我们可以创建`hooks`文件夹，并且将sum++和狗狗图片切换的数据和方法封装到一起
 
 <img src="./assets/hooks文件夹.png" style="zoom:50%;" />
 
@@ -1410,5 +1410,294 @@ const {dogList, getDog} = useDogs()
 </script>
 ```
 
+## 第六天
 
+### 配置路由
 
+- 1.导航区、展示区
+- 2.请来路由器
+- 3.制定路由的具体规则（什么路径，对应着什么组件）
+- 4.形成一个一个的？？？.vue
+
+`App.vue`准备代码
+
+```vue
+<script lang="ts" setup name=App>
+
+</script>
+
+<template>
+  <div class="app">
+    <h2 class="title">Vue路由测试</h2>
+    <!--    导航区-->
+    <div class="navigate">
+      <a href="#" class="active">首页</a>
+      <a href="#">新闻</a>
+      <a href="#">关于</a>
+    </div>
+    <div class="main-content">
+      此处用于展示各种组件
+    </div>
+  </div>
+
+</template>
+
+<style scoped>
+/* App */
+.title {
+  text-align: center;
+  word-spacing: 5px;
+  margin: 30px 0;
+  height: 70px;
+  line-height: 70px;
+  background-image: linear-gradient(45deg, gray, white);
+  border-radius: 10px;
+  box-shadow: 0 0 2px;
+  font-size: 30px;
+}
+
+.navigate {
+  display: flex;
+  justify-content: space-around;
+  margin: 0 100px;
+}
+
+.navigate a {
+  display: block;
+  text-align: center;
+  width: 90px;
+  height: 40px;
+  line-height: 40px;
+  border-radius: 10px;
+  background-color: gray;
+  text-decoration: none;
+  color: white;
+  font-size: 18px;
+  letter-spacing: 5px;
+}
+
+.navigate a.active {
+  background-color: #64967E;
+  color: #ffc268;
+  font-weight: 900;
+  text-shadow: 0 0 1px black;
+  font-family: 微软雅黑;
+}
+
+.main-content {
+  margin: 0 auto;
+  margin-top: 30px;
+  border-radius: 10px;
+  width: 90%;
+  height: 400px;
+  border: 1px solid;
+}
+</style>
+```
+
+- 1.安装路由`npm i vue-router`或`yarn add vue-router`
+- 2.创建router文件夹，新建index.ts文件
+
+```ts
+// 创建一个路由器并暴露出去
+
+// 引入：createRouter
+import {createRouter, createWebHistory} from 'vue-router'
+// 引入一个一个可能要呈现的组件
+import Home from "../pages/Home.vue";
+import News from "../pages/News.vue";
+import About from "../pages/About.vue";
+
+// 创建路由器
+const router = createRouter({
+    history: createWebHistory(),    // 路由器的工作模式（稍后讲解）
+    routes: [	// 这是我们定义的路由
+        {
+            name: 'zhuye',
+            path: '/home',
+            component: Home
+        },
+        {
+            name: 'guanyu',
+            path: '/about',
+            component: About
+        },
+        {
+            name: 'xinwen',
+            path: '/news',
+            component: News
+        }
+    ]
+})
+
+// 暴露出去router
+export default router;
+```
+
+- 3.在`main.ts`文件引入刚创建的router
+
+```ts
+// 引入createApp用于创建应用
+import {createApp} from "vue";
+// 引入app组件
+import App from "./App.vue";
+import router from "./router";
+
+// 创建一个应用
+const app = createApp(App)
+// 使用路由器
+app.use(router)
+// 挂载整个应用到app容器中
+app.mount("#app")
+```
+
+- 4.在合适位置展示路由出口
+
+```vue
+// App.vue
+
+<script lang="ts" setup name=App>
+import {RouterView, RouterLink} from 'vue-router'	// 引入RouterView和RouterLink
+</script>
+
+<template>
+  <div class="app">
+    <h2 class="title">Vue路由测试</h2>
+    <!--    导航区-->
+    <div class="navigate">	// 使用RouterLink标签便于切换路由，active-class可以快速切换样式
+      <RouterLink to="/home" active-class="active">首页</RouterLink>
+      <RouterLink to="/news" active-class="active">新闻</RouterLink>
+      <RouterLink to="/about" active-class="active">关于</RouterLink>
+    </div>
+    <div class="main-content">
+      <RouterView></RouterView>	// 用于展示路由的位置
+    </div>
+  </div>
+
+</template>
+
+<style scoped>
+/* App */
+.title {
+  text-align: center;
+  word-spacing: 5px;
+  margin: 30px 0;
+  height: 70px;
+  line-height: 70px;
+  background-image: linear-gradient(45deg, gray, white);
+  border-radius: 10px;
+  box-shadow: 0 0 2px;
+  font-size: 30px;
+}
+
+.navigate {
+  display: flex;
+  justify-content: space-around;
+  margin: 0 100px;
+}
+
+.navigate a {
+  display: block;
+  text-align: center;
+  width: 90px;
+  height: 40px;
+  line-height: 40px;
+  border-radius: 10px;
+  background-color: gray;
+  text-decoration: none;
+  color: white;
+  font-size: 18px;
+  letter-spacing: 5px;
+}
+
+.navigate a.active {
+  background-color: #64967E;
+  color: #ffc268;
+  font-weight: 900;
+  text-shadow: 0 0 1px black;
+  font-family: 微软雅黑;
+}
+
+.main-content {
+  margin: 0 auto;
+  margin-top: 30px;
+  border-radius: 10px;
+  width: 90%;
+  height: 400px;
+  border: 1px solid;
+}
+</style>
+```
+
+### 两个注意点
+
+对于`Demo.vue`
+
+- 路由组件：靠路由的规则渲染出来的
+
+  routes:[
+
+  ​	{path:'/demo', component:Demo}
+
+  ]
+
+- 一般组件：亲手写标签<Demo/>
+
+因此一般会将路由组件统一写到`pages`文件夹中
+
+<img src="./assets/pages文件夹.png" style="zoom:50%;" />
+
+### 路由器工作模式
+
+- `history`模式：
+
+  - Vue2:`mode:history`
+  - Vue3:`history:createWebHistory()`
+  - React:`<BrowserRouter>`
+
+  优点：`URL`更加美观，不带有'#'，更接近传统网站`URL`
+
+  缺点：后期项目上线，需要服务端配合处理路径问题，否则刷新会有404错误
+
+`hash`模式
+
+​	优点：兼容性更好，因为不需要服务器端处理路径
+
+​	缺点：`URL`带有#不太美观，且在`SEO`优化方面相对较差
+
+### `to`的两种写法
+
+在之前，我们关于切换路由采取以下写法
+
+```vue
+<!--    导航区-->
+    <div class="navigate">	// 使用RouterLink标签便于切换路由，active-class可以快速切换样式
+      <RouterLink to="/home" active-class="active">首页</RouterLink>
+      <RouterLink to="/news" active-class="active">新闻</RouterLink>
+      <RouterLink to="/about" active-class="active">关于</RouterLink>
+    </div>
+```
+
+我们也可以按照路径配置
+
+```vue
+<!--    导航区-->
+    <div class="navigate">	// 使用RouterLink标签便于切换路由，active-class可以快速切换样式
+      <RouterLink to="/home" active-class="active">首页</RouterLink>
+      <RouterLink to="/news" active-class="active">新闻</RouterLink>
+      <RouterLink :to="{path:'/about'}" active-class="active">关于</RouterLink>
+    </div>
+```
+
+同时，我们也可以按照名称name配置
+
+```vue
+ <!--    导航区-->
+    <div class="navigate">
+      <RouterLink to="/home" active-class="active">首页</RouterLink>	// 标准to写法
+      <RouterLink :to="{name:'xinwen'}" active-class="active">新闻</RouterLink>	// 按照名称
+      <RouterLink :to="{path:'/about'}" active-class="active">关于</RouterLink>	// 按照路径
+    </div>
+```
+
+你可能觉得标准的to写法最简单，但是在后面我会详细介绍后两种写法的优点
