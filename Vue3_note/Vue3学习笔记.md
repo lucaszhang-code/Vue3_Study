@@ -1701,3 +1701,317 @@ import {RouterView, RouterLink} from 'vue-router'	// 引入RouterView和RouterLi
 ```
 
 你可能觉得标准的to写法最简单，但是在后面我会详细介绍后两种写法的优点
+
+## 第七天
+
+### 嵌套路由
+
+之前我们做了导航栏和展示框，现在我们想在新闻界面通过点击不同新闻标题显示不同页面，我们可以使用嵌套路由完成这点
+
+![嵌套路由](./assets/嵌套路由.png)
+
+- 1.创建`Detail.vue`
+
+```vue
+<script setup lang="ts">
+
+</script>
+
+<template>
+  <ul class="news-list">
+    <li>编号：xxx</li>
+    <li>标题：xxx</li>
+    <li>内容：xxx</li>
+  </ul>
+</template>
+
+<style scoped>
+.news-list {
+  list-style: none;
+  padding-left: 20px;
+}
+
+.news-list > li {
+  line-height: 30px;
+}
+</style>
+```
+
+- 2.配置嵌套路由
+
+```vue
+// src/router/index.ts
+
+// 创建一个路由器并暴露出去
+
+// 引入：createRouter
+import {createRouter, createWebHistory} from 'vue-router'
+// 引入一个一个可能要呈现的组件
+import Home from "../pages/Home.vue";
+import News from "../pages/News.vue";
+import About from "../pages/About.vue";
+import Detail from "../pages/Detail.vue";
+
+// 创建路由器
+const router = createRouter({
+    history: createWebHistory(),    // 路由器的工作模式（稍后讲解）
+    routes: [
+        {
+            name: 'zhuye',
+            path: '/home',
+            component: Home
+        },
+        {
+            name: 'guanyu',
+            path: '/about',
+            component: About
+        },
+        {
+            name: 'xinwen',
+            path: '/news',
+            component: News,
+            children: [		// 	使用children配置嵌套路由
+                {
+                    name:'xiangqing',
+                    path:'detail',
+                    component:Detail
+                }
+            ]
+        }
+    ]
+})
+
+// 暴露出去router
+export default router;
+```
+
+- 3.展示路由
+
+注意：路径是`/news/detail`
+
+```vue
+<template>
+  <div class="news">
+    <!--    导航区-->
+    <ul>
+      <li v-for="news in newsList" :key="news.id">
+	<RouterLink to="/news/detail">{{news.title}}</RouterLink>
+      </li>
+    </ul>
+    <!--    展示区-->
+    <div class="news-content">
+      <RouterView></RouterView>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts" name="News">
+import {reactive} from "vue";
+import {RouterView, RouterLink} from 'vue-router'
+
+let newsList = reactive([
+  {id: '001', title: '十种抗癌实物', content: '西蓝花'},
+  {id: '002', title: '如何一夜暴富', content: '学IT'},
+  {id: '003', title: '震惊', content: '明天是周四'},
+  {id: '004', title: '好消息！', content: '快开学了'},
+])
+
+</script>
+
+<style scoped>
+/* 新闻 */
+.news {
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.news ul {
+  margin-top: 30px;
+  list-style: none;
+  padding-left: 10px;
+}
+
+.news li > a {
+  font-size: 18px;
+  line-height: 40px;
+  text-decoration: none;
+  color: #64967E;
+  text-shadow: 0 0 1px rgb(0, 84, 0);
+}
+
+.news-content {
+  width: 70%;
+  height: 90%;
+  border: 1px solid;
+  margin-top: 20px;
+  border-radius: 10px;
+}
+</style>
+```
+
+### `query`路由传参
+
+虽然我们成功将嵌套路由配置完了，但是我们还想动态展示不同的信息，比如Detail组件想展示News组件的信息
+
+- 1.配置`Detail.vue`组件，接收传参
+
+```vue
+// Detail.vue组件
+
+<script setup lang="ts">
+import {useRoute} from 'vue-router'	// 导入useRoute包
+import {toRefs} from "vue";	
+const route = useRoute()	// 调用useRoute函数，并接收返回值
+const {query} = toRefs(route)	// 解构
+</script>
+
+<template>
+  <ul class="news-list">
+    <li>编号：{{query.id}}</li>
+    <li>标题：{{query.title}}</li>
+    <li>内容：{{query.content}}</li>
+  </ul>
+</template>
+
+<style scoped>
+.news-list {
+  list-style: none;
+  padding-left: 20px;
+}
+
+.news-list > li {
+  line-height: 30px;
+}
+</style>
+```
+
+- 2.`RouterLink`传递参数
+
+由于`to`后面写的是字符串，内容是写死的，但是我们又想动态的拼接字符串，我们就可以使用ES6的模版字符串，注意：路径后面接“?”然后写传递的参数，不用写双引号
+
+```vue
+<RouterLink :to="`/news/detail?id=${news.id}&title=${news.title}&content=${news.content}`">{{news.title}}</RouterLink>
+```
+
+你可能觉得这种方法太麻烦，并且不直观，这时昨天学习的两种`to`写法就有用了
+
+```vue
+        <RouterLink :to="{
+         path:'/news/detail',
+          query:{
+            id:news.id,
+            title:news.title,
+            content:news.content
+          }
+        }">{{ news.title }}
+        </RouterLink>
+```
+
+同时如果配置路由的时候给组件配置了名字，我们也可以通过name跳转
+
+```vue
+        <RouterLink :to="{
+         name:'xiangqing',
+          query:{
+            id:news.id,
+            title:news.title,
+            content:news.content
+          }
+        }">{{ news.title }}
+        </RouterLink>
+```
+
+### `params`传参
+
+之前我们使用的都是`query`传参，如果使用第一种传参方法，我们需要使用键值对，也就是`id=${??}&name=${??}`这种方式，如果使用params传参就不需要，我们可以直接写
+
+```vue
+<RouterLink to="/news/detail/news.id/news.title/news.contnet">{{ news.title }}</RouterLink>
+```
+
+如果我们不做任何修改，这样编译器只会把`news.id`这些参数当成路由地址，因此我们需要在路由的配置文件配一些东西
+
+在这行代码中，我们在detail路径后面跟上了`:变量名`，如果写了`?`代表当前参数可传可不传
+
+注意：由于在`RouterLink`中我们只需要写参数，因此你在配置文件中定义的参数名，在路由组件中访问也必须是相同的名字
+
+```ts
+path: 'detail/:id/:title/:content?'
+```
+
+当然我们也可以使用这种方法传递参数，注意：使用`params`传参不能通过`path`获取路径，只能通过`name`
+
+```vue
+ <RouterLink :to="{
+                  name:'xiangqing',
+                  params:{
+                    id:news.id,
+                    title:news.title,
+                    content:news.content
+                  }
+                }">{{ news.title }}
+        </RouterLink>
+```
+
+### `props`配置
+
+在之前的`Detail.vue`组件中，我们都需要引入`useRoute`函数，然后通过`route.query.??`的形式访问参数，可能这样会有点麻烦（也不算很麻烦~），我们能不能不写前面的一长串，只写参数名呢？
+
+配置`index.ts`文件
+
+注意：第一种`props`写法只能通过`params`方法传递参数
+
+第二种写法都可以，最好一个项目中决定一种写法，不要混用
+
+本质上使用`props`配置其实就相当于`<RouterLink id='?'><RouterLink/>`
+
+```ts
+// src/router/index.ts
+
+children: [
+                {
+                    name: 'xiangqing',
+                    path: 'detail/:id/:title/:content?',
+                    component: Detail,
+                    // 第一种写法，将路由写的所有params参数作为props传给组件
+                    // props: true
+
+                    // 第二种写法：函数写法，可以自己决定将什么作为props给路由组件
+                    props(route) {
+                        return route.query
+                    }
+                    // 对象写法，可以自己决定将什么作为props给路由组件，不推荐，因为数据固定
+                    // props:{
+                    //     a:100,
+                    //     b:200,
+                    //     c:300
+                    // }
+
+                }
+            ]
+```
+
+`Detail`配置
+
+就像组件通信`props`一样获取数据
+
+```vue
+<script setup lang="ts">
+defineProps(['id', 'title', 'content'])
+</script>
+```
+
+### `replace`属性
+
+在一般的页面中，我们可以通过浏览器的前进返回键切换访问过的页面，如果给路由`RouterLink`添加`replace`就无法返回之前访问过的页面，比如
+
+```vue
+<RouterLink replace></RouterLink>
+```
+
+
+
+
+

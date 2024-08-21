@@ -7,7 +7,7 @@
         <!--        <RouterLink :to="`/news/detail?id=${news.id}&title=${news.title}&content=${news.content}`">{{ news.title }}-->
         <!--        </RouterLink>-->
         <RouterLink :to="{
-                  name:'xiangqing',
+                 name:'xiangqing',
                   query:{
                     id:news.id,
                     title:news.title,
