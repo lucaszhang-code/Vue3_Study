@@ -2011,7 +2011,206 @@ defineProps(['id', 'title', 'content'])
 <RouterLink replace></RouterLink>
 ```
 
+## 第八天
 
+### 路由——编程式路由导航
+
+在以往的实践中，我们都是采用`<RouterLink><RouterLink/>`标签实现路由跳转，但是在很多时候，我们是需要在函数中让组件进行路由跳转，我们当然不能在TS代码中使用模版，因此我们采用编程式路由导航完成这个需求
+
+```vue
+<script setup lang="ts" name="Home">
+import {onMounted} from "vue";
+import {useRouter} from 'vue-router'	// 引入useRouter
+const router = useRouter()	// 接收返回的值
+
+onMounted(() => {
+  setTimeout(() => {
+    // 在此处编写一段代码，让路由实现跳转
+    router.push('/news')	// 调用函数，转到某个路由
+    // 	注意：你可以使用push，也可以使用replace
+  }, 3000)
+})
+</script>
+```
+
+### 路由重定向
+
+有些时候我们需要确定初始网站入口，或者有多个组件，当用户权限不够时，程序能主动跳转到其他组件页面，这就是路由重定向
+
+我们只需要修改`src/router/index.ts`其中的路由配置就能完成
+
+```ts
+// 创建路由器
+const router = createRouter({
+    history: createWebHistory(),    // 路由器的工作模式（稍后讲解）
+    routes: [
+        {
+            name: 'zhuye',
+            path: '/home',
+            component: Home
+        },
+        {
+            name: 'guanyu',
+            path: '/about',
+            component: About
+        },
+        {
+            name: 'xinwen',
+            path: '/news',
+            component: News,
+            children: [
+                {
+                    name: 'xiangqing',
+                    path: 'detail/:id/:title/:content?',
+                    component: Detail,
+                    props: true
+                }
+            ]
+        },
+        // 让指定的路由跳转到另个路由,你可以理解成当遇到/结尾的网址，自动跳转到/home页面
+        {
+            path:'/',
+            redirect: '/home'
+        }
+    ]
+})
+```
+
+### 对`Pinia`的理解
+
+在`Vue2`时，我们一般使用`Vuex`进行其中的组件状态管理，而在`Vue3`我们更倾向于使用`Pinia`
+
+`Pinia`是`Vue` 的专属状态管理库，它允许你跨组件或页面共享状态
+
+#### 1.准备一个效果
+
+```vue
+// GetLove.vue
+
+<script setup lang="ts" name="getLove">
+import {reactive} from "vue";
+import axios from 'axios'
+import {nanoid} from "nanoid";
+
+let talkList = reactive([
+  {id: '001', title: '你好'},
+  {id: '002', title: '我好'},
+  {id: '003', title: '大家好'}
+])
+
+async function getLoveTalk(){
+  const {data : {content}} = await axios.get('https://api.uomg.com/api/rand.qinghua?format=json')
+  talkList.unshift({
+    id: nanoid(),
+    title : content
+  })
+}
+</script>
+
+<template>
+  <div class="talk">
+    <button @click="getLoveTalk">获取一句土味情话</button>
+    <ul>
+      <li v-for="talk in talkList" :key="talk.id">{{talk.title}}</li>
+    </ul>
+  </div>
+</template>
+
+<style scoped lang="less">
+.talk {
+  background-color: orange;
+  border-radius: 10px;
+  padding: 10px;
+  width: 250px;
+  //height: 100px;
+  box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.15);
+  margin: auto;
+}
+</style>
+```
+
+```vue
+// GetSum.vue
+
+<script setup lang="ts">
+import { ref } from "vue";
+
+let sum = ref(0);
+let getSelectedValue = ref(1);
+
+function addSum() {
+  sum.value += Number(getSelectedValue.value)
+}
+
+function subSum() {
+  sum.value -= Number(getSelectedValue.value)
+}
+</script>
+
+<template>
+  <div class="getSum" name="getSum">
+    <h3>当前求和为: {{ sum }}</h3>
+    <select v-model.number="getSelectedValue" name="" id="selectNum">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+    </select>
+    <button @click="addSum">加</button>
+    <button @click="subSum">减</button>
+  </div>
+</template>
+
+<style scoped lang="less">
+.getSum {
+  background-color: skyblue;
+  border-radius: 10px;
+  padding: 10px;
+  width: 250px;
+  height: 100px;
+  box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.15);
+  margin: auto;
+
+  #selectNum,button {
+    height: 25px;
+    //width: 50px;
+    margin-right: 10px;
+  }
+}
+</style>
+
+```
+
+效果
+
+![准备一个效果](./assets/准备一个效果.png)
+
+#### 2.搭建`Pinia`环境
+
+下载`Pinia`
+
+```
+npm i pinia 或 yarn add pinia
+```
+
+并在`main.ts`中配置
+
+```ts
+import {createApp} from "vue";
+import App from "./App.vue";
+
+// 引入pinia
+import {createPinia} from 'pinia'
+
+// 创建一个应用
+const app = createApp(App)
+
+// 创建pinia
+const pinia = createPinia()
+
+app.mount("#app")
+// 安装pinia
+app.use(pinia)
+```
 
 
 

@@ -31,22 +31,14 @@ const router = createRouter({
                     name: 'xiangqing',
                     path: 'detail/:id/:title/:content?',
                     component: Detail,
-                    // 第一种写法，将路由写的所有params参数作为props传给组件
-                    // props: true
-
-                    // 第二种写法：函数写法，可以自己决定讲什么作为props给路由组件
-                    props(route) {
-                        return route.query
-                    }
-                    // 对象写法，可以自己决定将什么作为props给路由组件
-                    // props:{
-                    //     a:100,
-                    //     b:200,
-                    //     c:300
-                    // }
-
+                    props: true
                 }
             ]
+        },
+        // 让指定的路由跳转到另个路由
+        {
+            path:'/',
+            redirect: '/home'
         }
     ]
 })
