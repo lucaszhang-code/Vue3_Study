@@ -11,22 +11,21 @@ import {useTalkStore} from "../store/talk";
 // ])
 
 const talkStore = useTalkStore();
-talkStore.$subscribe(() => {
-  console.log('talkStore里面的数据发生变化')
-  localStorage.setItem('talkList', JSON.stringify(talkStore.talkList));
-})
 
-function getLoveTalk() {
-  talkStore.getATalk()
+async function getLoveTalk(){
+  const {data : {content}} = await axios.get('https://api.uomg.com/api/rand.qinghua?format=json')
+  talkStore.talkList.unshift({
+    id: nanoid(),
+    title : content
+  })
 }
-
 </script>
 
 <template>
   <div class="talk">
     <button @click="getLoveTalk">获取一句土味情话</button>
     <ul>
-      <li v-for="talk in talkStore.talkList" :key="talk.id">{{ talk.title }}</li>
+      <li v-for="talk in talkStore.talkList" :key="talk.id">{{talk.title}}</li>
     </ul>
   </div>
 </template>

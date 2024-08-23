@@ -2212,5 +2212,252 @@ app.mount("#app")
 app.use(pinia)
 ```
 
+## 第九天
+
+#### 3.`pinia`存储+修改数据
+
+成功配置好`pinia`后在`src`目录下，新建`store`文件夹，根据需求创建`ts`文件，用于存储数据
+
+```ts
+// count.ts
+
+import {defineStore} from 'pinia'	// 引入对应的包
+
+export const useCountStore = defineStore('count', {	// 记得将函数暴露出去
+    // 真正存储数据的地方
+    state(){
+        return {
+            sum : 6
+        }
+    }
+})
+```
+
+```ts
+// talk.ts
+
+import {defineStore} from 'pinia'
+
+export const useTalkStore = defineStore('talk', {
+    state() {
+        return {
+            talkList: [
+                {id: '001', title: '你好'},
+                {id: '002', title: '我好'},
+                {id: '003', title: '大家好'}
+            ]
+        }
+    }
+})
+```
+
+使用数据
+
+```vue
+<script setup lang="ts" name = "getSum">
+import { ref } from "vue";
+import {useCountStore} from "../store/count";	// 引入刚刚的store里面的存储文件
+
+const countStore = useCountStore()	// 调用函数，自定义一个变量去接收
+
+// 以下两种写法都可以，个人推荐第一种
+console.log(countStore.sum)
+console.log(countStore.$state.sum)
+
+let getSelectedValue = ref(1);
+
+function addSum() {
+
+}
+
+function subSum() {
+
+}
+</script>
+
+<template>
+  <div class="getSum" name="getSum">
+    <h3>当前求和为: {{ countStore.sum }}</h3>	// 直接调用即可，无需写.value
+    <select v-model.number="getSelectedValue" name="" id="selectNum">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+    </select>
+    <button @click="addSum">加</button>
+    <button @click="subSum">减</button>
+  </div>
+</template>
+```
+
+#### 4.`pinia`修改数据的三种方式
+
+假设这是我的store数据,里面增加了一个school对象
+
+```ts
+export const useCountStore = defineStore('count', {
+    // actions里面放置着一个一个的方法用于响应组件中的动作
+    actions: {
+        increment(value) {
+            // console.log('increment被调用了', value)
+            this.sum += value
+        }
+    },
+    // 真正存储数据的地方
+    state() {
+        return {
+            sum: 6,
+            school: {
+                name: '桂电',
+                location: '桂林'
+            }
+        }
+    }
+})
+```
+
+调用函数`addSum`会触发数据的修改
+
+##### 第一种
+
+既然采用`countStore.sum`获取数据，在`pinia`中同样可以直接修改数据，并且数据是响应式的
+
+```ts
+ countStore.sum++	
+```
+
+##### 第二种
+
+如果我们要修改大量数据，也可以直接修改对象,使用`$patch`关键字
+
+```ts
+countStore.$patch({
+    sum:666,
+    school:{
+      name:'桂林电子科技大学',
+      location:'桂林市'
+    }
+  })
+```
+
+##### 第三种
+
+这种方式一般用于处理复杂的逻辑，使用`increment`关键字
+
+```ts
+countStore.increment(getSelectedValue.value)	// getSelectedValue.value是下拉菜单的值
+```
+
+```ts
+export const useCountStore = defineStore('count', {
+    // actions里面放置着一个一个的方法用于响应组件中的动作
+    actions: {
+        increment(value) {
+            if(value < 10)	// 可以在actions中写一些逻辑
+            	this.sum += value	// 这个地方可以使用this关键字
+        }
+    },
+    // 真正存储数据的地方
+    state() {
+        return {
+            sum: 6,
+            school: {
+                name: '桂电',
+                location: '桂林'
+            }
+        }
+    }
+})
+```
+
+当然三种方法都可以使用，按照个人喜好使用
+
+#### 5.`storeToRefs`
+
+在我们的模版中，我们很多数据的使用都是`什么.什么`，因此我们可以选择解构，简化代码
+
+```vue
+<template>
+  <div class="getSum" name="getSum">
+    <h3>当前求和为: {{ countStore.sum }}</h3>
+    <h3>欢迎来到{{countStore.school.name}},坐落于{{countStore.school.location}}</h3>
+    <select v-model.number="getSelectedValue" name="" id="selectNum">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+    </select>
+    <button @click="addSum">加</button>
+    <button @click="subSum">减</button>
+  </div>
+</template>
+```
+
+我们当然可以采用`toRefs`关键字将解构后的变量转化成响应式，但是这样做会导致`countStore`里面所有的数据成为`Object`响应式，没有必要
+
+```ts
+const {sum, school} = toTefs(useCountStore())
+```
+
+因此，我们可以使用`pinia`自带的关键字`storeToRefs`进行解构转换
+
+```ts
+const {sum, school} = storeToRefs(useCountStore())
+```
+
+#### 6.`getters`的使用
+
+你可以把`getters`简单理解成`computed`，因为他主要用于处理计算属性
+
+```ts
+export const useCountStore = defineStore('count', {
+    getters: {
+        bigSum(){
+            return this.sum * 10	// 将sum的值放大10倍并用于显示
+        }
+    },
+    // actions里面放置着一个一个的方法用于响应组件中的动作
+    actions: {
+        increment(value : number) {
+            // console.log('increment被调用了', value)
+            this.sum += value
+        }
+    },
+    // 真正存储数据的地方
+    state() {
+        return {
+            sum: 6,
+            school: {
+                name: '桂电',
+                location: '桂林'
+            }
+        }
+    }
+})
+```
+
+在模版中直接调用函数即可
+
+注意！下面的变量已经经过了解构
+
+```vue
+    <h3>当前求和为: {{ sum }}</h3>
+    <h3>放大十倍后:{{ bigSum }}</h3>
+```
+
+#### 7.`$subscribe`的使用
+
+你也可以将`$subscribe`理解为`watch`，他的作用是监视store数据的变化,一旦store里面的数据发生变化，它就会响应
+
+下面的代码是当`talkList`（数组）的数据发生变化时，就会将数组的内容存入本地，从而形成持久化存储
+
+```ts
+const talkStore = useTalkStore();
+talkStore.$subscribe(() => {
+  console.log('talkStore里面的数据发生变化')
+  localStorage.setItem('talkList', JSON.stringify(talkStore.talkList));
+})
+```
+
+
+
 
 

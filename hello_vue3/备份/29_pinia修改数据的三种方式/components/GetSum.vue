@@ -1,14 +1,11 @@
 <script setup lang="ts" name = "getSum">
 import { ref } from "vue";
 import {useCountStore} from "../store/count";
-import {storeToRefs} from 'pinia'
 
-// const countStore = useCountStore()
-const {sum, school, bigSum} = storeToRefs(useCountStore())
-const {name, location} = school.value;
+const countStore = useCountStore()
 
-// console.log(countStore.sum)
-// console.log(countStore.$state.sum)
+console.log(countStore.sum)
+console.log(countStore.$state.sum)
 
 let getSelectedValue = ref(1);
 
@@ -26,7 +23,7 @@ function addSum() {
   // })
 
   // 第三种修改方式
-  useCountStore().increment(getSelectedValue.value)
+  countStore.increment(getSelectedValue.value)
 }
 
 
@@ -37,9 +34,8 @@ function subSum() {
 
 <template>
   <div class="getSum" name="getSum">
-    <h3>当前求和为: {{ sum }}</h3>
-    <h3>放大十倍后:{{ bigSum }}</h3>
-    <h3>欢迎来到{{name}},坐落于{{location}}</h3>
+    <h3>当前求和为: {{ countStore.sum }}</h3>
+    <h3>欢迎来到{{countStore.school.name}},坐落于{{countStore.school.location}}</h3>
     <select v-model.number="getSelectedValue" name="" id="selectNum">
       <option value="1">1</option>
       <option value="2">2</option>
