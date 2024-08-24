@@ -2457,6 +2457,296 @@ talkStore.$subscribe(() => {
 })
 ```
 
+## 第十天
+
+### `store`的组合式写法
+
+我们知道Vue3是组合式API，在`store`里面我们写的却都是选项式API，因此我们也可以用组合式API去写仓库
+
+```ts
+import {defineStore} from 'pinia'
+import {nanoid} from 'nanoid'
+import axios from 'axios'
+import {reactive, ref} from 'vue'
+
+export const useTalkStore = defineStore('talk', () => {
+    const talkList = reactive(JSON.parse(localStorage.getItem('talkList') as string) || [])
+
+    // action相当于getATalk函数
+    async function getATalk() {
+        const {data: {content}} = await axios.get('https://api.uomg.com/api/rand.qinghua?format=json')
+        talkList.unshift({
+            id: nanoid(),
+            title: content
+        })
+    }
+
+    return {talkList, getATalk}
+})
+```
+
+从代码中我们可以看见，没有`state`，`action`，`getters`这些选项，只需要最后将这些变量传递出去就可以
+
+在Vue3中`getters`可以用`computed`代替
+
+### 组件通信
+
+#### 1.`props`
+
+主要用于父子组件通信
+
+父组件如果想获取子组件的信息可以通过函数传参的方式，父组件设定了一个方法`getToy`，并将这个方法传给子组件，子组件当然也可以接收到这个方法`defineProps(['car', 'sendToy'])`,然后通过`click`去调用这个方法`  <button @click="sendToy(toy)">把玩具给父亲</button>`，同时将自身`toy`的变量传进函数，进而将数据传递给父元素
+
+其实本质就是子组件去调用父组件的函数，同时参数是子组件给的而已
+
+```vue
+// Father.vue
+
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <h4>汽车:{{ car }}</h4>
+    <h4 v-if="toy">儿子给的玩具：{{toy}}</h4>
+    <Child :car="car" :sendToy="getToy"/>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+import Child from './Child.vue'
+import {ref} from 'vue'
+
+let car = ref('奔驰')
+let toy = ref()
+
+// 方法
+function getToy(value: string) {
+  toy.value = value
+}
+
+
+</script>
+
+<style scoped>
+.father {
+  background-color: rgb(165, 164, 164);
+  padding: 20px;
+  border-radius: 10px;
+}
+</style>
+```
+
+```vue
+// Child.vue
+
+<template>
+  <div class="child">
+    <h3>子组件</h3>
+    <h4>玩具:{{ toy }}</h4>
+    <h4>父亲给的汽车:{{car}}</h4>
+    <button @click="sendToy(toy)">把玩具给父亲</button>
+  </div>
+</template>
+
+<script setup lang="ts" name="Child">
+import {ref} from 'vue'
+import {send} from "vite";
+
+let toy = ref('奥特曼')
+// 声明接收props
+defineProps(['car', 'sendToy'])
+
+</script>
+
+<style scoped>
+.child {
+  background-color: skyblue;
+  padding: 10px;
+  box-shadow: 0 0 10px black;
+  border-radius: 10px;
+}
+</style>
+
+```
+
+#### 2.自定义事件
+
+很多时候，我们不一定是点击（click）或者键盘输入（input）等方式触发函数，也就是子组件不一定是上述方式调用父组件的函数，这时我们就可以采用自定义事件
+
+对于父组件，我们采用`<Child @send-toy="saveToy"></Child>`，也就是说当子组件采取`send-toy`的方式，就可以调用`saveToy`这个函数
+
+对于子组件，我们可以使用`defineEmits`去接收这个指令，`const emit = defineEmits(['send-toy'])`,当子组件采用`click`的形式就可以触发调用`saveToy`函数，`<button @click="emit('send-toy', toy)">测试</button>`,同时也可以将`toy`变量传递过去
+
+当然我们也可以不采用`click`方式去调用函数，比如
+
+```vue
+ onMounted(() => {
+   setTimeout(() => {
+     emit('send-toy', toy)
+   }, 3000)
+})
+```
+
+通过定时器去触发
+
+```vue
+// Father.vue
+
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <!--    给子组件child绑定事件-->
+    <Child @send-toy="saveToy"></Child>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+import Child from './Child.vue'
+import {ref} from "vue";
+
+let str = ref('你好')
+
+function saveToy(value:string) {
+  console.log('saveToy', value)
+}
+
+</script>
+
+<style scoped>
+.father {
+  background-color: rgb(165, 164, 164);
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.father button {
+  margin-right: 5px;
+}
+</style>
+```
+
+```vue
+// Child.vue
+
+<template>
+  <div class="child">
+    <h3>子组件</h3>
+    <h4>玩具：{{ toy }}</h4>
+    <button @click="emit('send-toy', toy)">测试</button>
+  </div>
+</template>
+
+<script setup lang="ts" name="Child">
+import {ref, onMounted} from "vue";
+
+let toy = ref('奥特曼')
+
+// 声明事件
+const emit = defineEmits(['send-toy'])
+
+// onMounted(() => {
+//   setTimeout(() => {
+//     emit('haha')
+//   }, 3000)
+// })
+
+</script>
+
+<style scoped>
+.child {
+  margin-top: 10px;
+  background-color: rgb(76, 209, 76);
+  padding: 10px;
+  box-shadow: 0 0 10px black;
+  border-radius: 10px;
+}
+</style>
+```
+
+#### 3.`mitt`事件总线
+
+`mitt`是一个库，它类似于`pubsub`和`$bus`，可以让任意组件完成通信
+
+##### 配置
+
+```ts
+// src/utils/emitters.ts
+
+import mitt from "mitt";    // 引入
+
+const emitter = mitt()  // 调用mitt
+
+export default emitter  // 暴露
+```
+
+##### 使用
+
+现在有两个组件`Child1`和`Child2`需要他们传递数据
+
+`Child1`组件通过下面代码就可以将`toy`这个变量推送到事件总线，只要通过`send-toy`这个自定义事件都可以获取
+
+```vue
+ <button @click="emitter.emit('send-toy', toy)">玩具给弟弟</button>
+```
+
+`Child2`可以通过以下方式拿到`toy`变量
+
+```vue
+let toy = ref('')
+
+emitter.on('send-toy', (value) => {
+  // 给emitter绑定send-toy事件
+  // console.log('send-toy', value)
+  toy.value = value
+})
+```
+
+在合适时候我们也可以删除这条事件总线
+
+```vue
+// 在组建卸载时解绑事件
+onUnmounted(() => {
+  emitter.off('send-toy')
+})
+```
+
+#### 4.搞清楚`v-model`
+
+如果你使用过一些组件库，尤其是需要数据双向绑定的，你可以写`<Input v-model="name"><Input/>`这种代码，我们知道`v-model`只能作用于`HTML`标签，但是将它写在组件上却也能正常运行，我们就需要理解它背后的原理
+
+对于传统的`v-model`标签，我们都知道他可以写成`<input type="text" :value="userName" @input="userName=(<HTMLInputElement>$event.target).value"/>`,也就是说输入框的`value`源自`userName`,当触发输入事件时，令它的`userName`等于`$event.target.value`，从而实现数据的双向绑定
+
+那么我们能不能也仿照这种思想，去实现`Input`组件的双向绑定呢
+
+假如我们想将`input`输入标签抽离出来，单独写成一个组件`<AtGuiGuInput>`，便于自定义样式等
+
+`modelValue`指父组件将`userName`变量通过`modelValue`传递给子组件，同时，当子组件触发`update:modelValue`时，`userName=$event`
+
+```vue
+<AtguiguInput :modelValue="userName" @update:modelValue="userName=$event"></AtguiguInput>
+```
+
+对于子组件,我们接受`modelValue`,同时接受`'update:modelValue`自定义事件
+
+```vue
+defineProps(['modelValue'])
+const emit = defineEmits(['update:modelValue'])
+```
+
+对于`input`，他的`value`就是父组件传递过来的`userName`,当触发输入事件时，调用`emit('update:modelValue',$event.target.value)`，向父组件传递`$event.target.value`,而父组件`userName=$event`里面的`$event`就是组件传递的数据，从而实现数据的双向绑定
+
+```vue
+<input type="text" :value="modelValue"
+         @input="emit('update:modelValue', $event.target.value)">
+```
+
+所以，其实父组件我们也可以简化写成
+
+```vue
+<AtguiguInput v-model="userName"></AtguiguInput>
+```
+
+这就是`v-model`的原理，用户只需要使用`v-model`就可以让数据双向绑定了，而组件库作者要考虑的事就多了，他们需要严格按照`modelValue`和`@update:modelValue`这种写法去写
+
 
 
 
