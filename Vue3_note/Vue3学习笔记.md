@@ -2747,7 +2747,272 @@ const emit = defineEmits(['update:modelValue'])
 
 这就是`v-model`的原理，用户只需要使用`v-model`就可以让数据双向绑定了，而组件库作者要考虑的事就多了，他们需要严格按照`modelValue`和`@update:modelValue`这种写法去写
 
+##### `v-model`的细节
+
+以上介绍了`v-model`的原理，其实在很多时候，`modelValue`这个参数不一定叫这个名称，我们也可以自定义命名，目的是如果有多个数据双向绑定，便于区分
+
+假设在`AtguiguInput.vue`组件中有两个输入框
+
+```vue
+用户：<input type="text">
+密码：<input type="password">
+```
+
+对于父组件，我们可以这么区分,在`v-model`后面加上：来区分
+
+```vue
+<AtguiguInput v-model:user="userName" v-model:password="password"></AtguiguInput>
+```
+
+当然子组件也要进行修改
+
+```ts
+defineProps(['user', 'password'])
+const emit = defineEmits(['update:user', 'update:password'])
+```
+
+```vue
+用户：<input type="text" :value="user" @input="emit('update:user', $event.target.value)">
+密码：<input type="password" :value="password", @input="emit('update:password', $event.target.value)">
+```
+
+## 第十一天
+
+#### 5.`attrs`
+
+`attrs`主要用于祖孙组件通信，他的原理是祖父组件将数据传递给父组件，父组件充当中间件，再将组件传递给子组件
+
+```vue
+// 祖父组件
+
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <h4>a :{{ a }}</h4>
+    <h4>b :{{ b }}</h4>
+    <h4>c :{{ c }}</h4>
+    <h4>d :{{ d }}</h4>
+
+    <Child :a="a" :b="b" :c="c" :d="d" v-bind="{x:100, y:200}" :updateA="updateA"/>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+import Child from './Child.vue'
+import {ref} from 'vue'
+
+let a = ref(1)
+let b = ref(2)
+let c = ref(3)
+let d = ref(4)
+
+function updateA(value: number) {
+  a.value += value
+}
+
+</script>
+```
+祖父组件将数据传递给父组件，但是父组件并未使用`defineProps`接收，而在`$attrs`中可以找到，父组件又将这些数据传给子组件，通过`v-bind`绑定
+```vue
+// 父组件
+
+<template>
+  <div class="child">
+    <h3>子组件</h3>
+    <GrandChild v-bind="$attrs" />
+  </div>
+</template>
+
+<script setup lang="ts" name="Child">
+import GrandChild  from './GrandChild.vue'
+
+</script>
+```
+
+```vue
+// 子组件
+
+<template>
+	<div class="grand-child">
+		<h3>孙组件</h3>
+		<h4>a：{{ a }}</h4>
+		<h4>b：{{ b }}</h4>
+		<h4>c：{{ c }}</h4>
+		<h4>d：{{ d }}</h4>
+		<h4>x：{{ x }}</h4>
+		<h4>y：{{ y }}</h4>
+		<button @click="updateA(6)">点我将爷爷那的a更新</button>
+	</div>
+</template>
+
+<script setup lang="ts" name="GrandChild">
+	defineProps(['a','b','c','d','x','y','updateA'])
+</script>
+```
+
+#### 6.`$refs和$parent`
+
+`$refs`主要用于父传子，`$parent`用于子传父，他们和`props`最大的区别是`$refs`传递的是包含所有被`ref`属性标识的`DOM`元素组件实例；`$parent`是当前父组件实例对象
+
+父组件中分别将两个子组件绑定`ref`，同时提供对应的函数
+
+将`house`响应式数据暴露出去，让子组件可以使用
+
+```vue
+// 父组件
+
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <h4>房产：{{ house }}</h4>
+    <button @click="changeToy">修改Child1的玩具</button>
+    <button @click="changeComputer">修改Child2的电脑</button>
+    <button @click="getAllChild($refs)">让所有孩子的书变多</button>
+    <Child1 ref="c1"/>
+    <Child2 ref="c2"/>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+import Child1 from './Child1.vue'
+import Child2 from './Child2.vue'
+import {ref, reactive} from "vue";
+
+let house = ref(4)
+let c1 = ref()
+let c2 = ref()
+
+function changeToy() {
+  c1.value.toy = '小猪佩奇'
+}
+
+function changeComputer() {
+  c2.value.computed = '华为'
+}
+
+function getAllChild(refs: any) {
+  for (const refsKey in refs) {
+    refs[refsKey].book += 1	// 获取所有的book实例
+  }
+}
+
+defineExpose({house})
+
+</script>
+```
+
+子组件1将内部的`toy`和`book`响应式数据暴露出去，让父元素可以使用
+
+使用`minusHouse`函数，`parent`可以得到父组件的实例对象，也就是他暴露出来的数据
+
+```vue
+// 子组件1
+
+<template>
+  <div class="child1">
+    <h3>子组件1</h3>
+    <h4>玩具：{{ toy }}</h4>
+    <h4>书籍：{{ book }} 本</h4>
+    <button @click="minusHouse($parent)">干掉父亲的一套房产</button>
+  </div>
+</template>
+
+<script setup lang="ts" name="Child1">
+import {ref} from "vue";
+// 数据
+let toy = ref('奥特曼')
+let book = ref(3)
+
+function minusHouse(parent:any) {
+ parent.house -= 1
+}
+
+// 把数据交给外部
+defineExpose({toy, book})
+
+</script>
+```
+
+定义`computer`和`book`响应式数据，并暴露出去
+
+```vue
+// 子组件2
+
+<template>
+  <div class="child2">
+    <h3>子组件2</h3>
+		<h4>电脑：{{ computer }}</h4>
+		<h4>书籍：{{ book }} 本</h4>
+  </div>
+</template>
+
+<script setup lang="ts" name="Child2">
+		import { ref } from "vue";
+		// 数据
+		let computer = ref('联想')
+		let book = ref(6)
+
+    defineExpose({ computer, book })
+
+</script>
+```
+
+#### 7.`provide`和`inject`
+
+`provide`和`inject`主要用于爷孙组件的通信，有点类似于`$attrs`，但是他们最大的区别是`provide`不需要借助中间件就可以完成数据的传输
+
+```vue
+// 祖父组件
+
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <h4>银子：{{ money }}万元</h4>
+    <h4>车子：一辆{{ car.brand }}车，价值{{ car.price }}万元</h4>
+    <Child/>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+import Child from './Child.vue'
+import {ref, reactive, provide} from 'vue'
+
+let money = ref(100)
+let car = reactive({
+  brand: '玛莎拉蒂',
+  price: 1000000
+})
+
+function updateMoney(num: number) {
+  money.value -= num
+}
+
+// 向后代提供数据
+provide('moneyContext', {money, updateMoney})	// 传对象，对象里面包括值和函数
+provide('car', car)	// 传对象
+
+</script>
+```
+
+```vue
+// 孙子组件
+
+<template>
+  <div class="grand-child">
+    <h3>我是孙组件</h3>
+    <h4>银子：{{ money }}</h4>
+    <h4>车子：一辆{{ car.brand }}车，价值{{ car.price }}万元</h4>
+    <button @click="updateMoney(6)">花爷爷的钱</button>
+  </div>
+</template>
+
+<script setup lang="ts" name="GrandChild">
+import {inject} from "vue";
+
+let {updateMoney, money} = inject("moneyContext");	// 使用inject接收并解构
 
 
+let car = inject("car",{brand: "奥迪", price: 200});	// 接收对象，并给对象设置初始值，防止对象为空
+```
 
-
+注意，虽然`money`是`ref`的响应式数据，但在给孙组件传数据的时候不需要`.value`，因为`.value`是单纯的值，而不`.value`才是响应式数据本身（Proxy），在模版中使用也不需要`.value`

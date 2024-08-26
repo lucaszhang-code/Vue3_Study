@@ -11,8 +11,9 @@
 		// 数据
 		let computer = ref('联想')
 		let book = ref(6)
-		// 把数据交给外部
-		defineExpose({computer,book})
+
+    defineExpose({ computer, book })
+
 </script>
 
 <style scoped>
