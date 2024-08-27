@@ -3016,3 +3016,270 @@ let car = inject("car",{brand: "奥迪", price: 200});	// 接收对象，并给�
 ```
 
 注意，虽然`money`是`ref`的响应式数据，但在给孙组件传数据的时候不需要`.value`，因为`.value`是单纯的值，而不`.value`才是响应式数据本身（Proxy），在模版中使用也不需要`.value`
+
+## 第十二天
+
+#### 8.`slot`默认插槽
+
+假设我们有一个组件，用于展示列表，如下图所示
+
+![slots默认](./assets/slots默认.png)
+
+"热门游戏列表"，“今日美食城市”，“今日影视推荐”其实是同一个组件`Category.vue`，只是里面显示的内容不一样，因此我们可以采取`slots`插槽
+
+我们的组件`Category.vue`里面大部分内容都一样，只是`h2`和下面部分不一样，`h2`标签我们自然可以父传子，而剩下的部分我们可以使用`slot`标签占位，当然里面也可以写模版，作用是如果另一个组件没有传递东西过来，就可以默认显示`slot`里面的东西
+
+```vue
+<template>
+  <div class="category">
+    <h2>{{title}}</h2>
+    <slot>默认内容</slot>
+  </div>
+</template>
+
+<script setup lang="ts" name="Category">
+  defineProps(['title'])
+</script>
+
+<style scoped>
+  .category {
+    background-color: skyblue;
+    border-radius: 10px;
+    box-shadow: 0 0 10px;
+    padding: 10px;
+    width: 200px;
+    height: 300px;
+  }
+  h2 {
+    background-color: orange;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 800;
+  }
+</style>
+```
+
+对于`Father.vue`组件,以外我们的模版可以直接用`</Category>`表示，但是如果我们在中间写相应的HTML代码，这部分内容会作为插槽传递给相应的`slot`
+
+```vue
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <div class="content">
+      <Category title="热门游戏列表">
+        <ul>
+          <li v-for="g in games" :key="g.id">{{ g.name }}</li>
+        </ul>
+      </Category>
+      <Category title="今日美食城市">
+        <img :src="imgUrl" alt="">
+      </Category>
+      <Category title="今日影视推荐">
+        <video :src="videoUrl" controls></video>
+      </Category>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+  import Category from './Category.vue'
+  import { ref,reactive } from "vue";
+
+  let games = reactive([
+    {id:'asgytdfats01',name:'英雄联盟'},
+    {id:'asgytdfats02',name:'王者农药'},
+    {id:'asgytdfats03',name:'红色警戒'},
+    {id:'asgytdfats04',name:'斗罗大陆'}
+  ])
+  let imgUrl = ref('https://z1.ax1x.com/2023/11/19/piNxLo4.jpg')
+  let videoUrl = ref('http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4')
+
+</script>
+
+<style scoped>
+  .father {
+    background-color: rgb(165, 164, 164);
+    padding: 20px;
+    border-radius: 10px;
+  }
+  .content {
+    display: flex;
+    justify-content: space-evenly;
+  }
+  img,video {
+    width: 100%;
+  }
+</style>
+```
+
+#### 9.`slot`具名插槽
+
+顾名思义，就是插槽有了名字，因为我们在组件中`<Category></Category>`之间写的多个插槽如果不命名，就不知道具体作用于组件的哪个地方
+
+`Categoty.vue`组件使用`slot name="名字"></slot>`命名
+
+```vue
+<template>
+  <div class="category">
+    <slot name="s1">默认内容1</slot>
+    <slot name="s2">默认内容2</slot>
+  </div>
+</template>
+
+<script setup lang="ts" name="Category">
+  
+</script>
+```
+
+`Father.vue`这边需要用`<template></template>`标签把插槽包裹起来，使用`v-slot:名字`或者`#名字`命名
+
+```vue
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <div class="content">
+      <Category>
+        <template v-slot:s2>
+          <ul>
+            <li v-for="g in games" :key="g.id">{{ g.name }}</li>
+          </ul>
+        </template>
+        <template v-slot:s1>
+          <h2>热门游戏列表</h2>
+        </template>
+      </Category>
+
+      <Category>
+        <template v-slot:s2>
+          <img :src="imgUrl" alt="">
+        </template>
+        <template v-slot:s1>
+          <h2>今日美食城市</h2>
+        </template>
+      </Category>
+
+      <Category>
+        <template #s2>
+          <video video :src="videoUrl" controls></video>
+        </template>
+        <template #s1>
+          <h2>今日影视推荐</h2>
+        </template>
+      </Category>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+  import Category from './Category.vue'
+  import { ref,reactive } from "vue";
+
+  let games = reactive([
+    {id:'asgytdfats01',name:'英雄联盟'},
+    {id:'asgytdfats02',name:'王者农药'},
+    {id:'asgytdfats03',name:'红色警戒'},
+    {id:'asgytdfats04',name:'斗罗大陆'}
+  ])
+  let imgUrl = ref('https://z1.ax1x.com/2023/11/19/piNxLo4.jpg')
+  let videoUrl = ref('http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4')
+</script>
+```
+
+#### 10.`slot`作用域插槽
+
+简单来说，就是子组件的数据由自己管理，但是数据的展示却由父组件决定，因此需要将子组件的数据传递给父组件用于数据展示
+
+如图所有的数据都在`Game.vue`组件内,子组件的插槽通过`<slot :名字="数据变量名">`将数据传递给父组件
+
+```vue
+<template>
+  <div class="game">
+    <h2>游戏列表</h2>
+    <slot :youxi="games" x="哈哈" y="你好"></slot>
+  </div>
+</template>
+
+<script setup lang="ts" name="Game">
+  import {reactive} from 'vue'
+  let games = reactive([
+    {id:'asgytdfats01',name:'英雄联盟'},
+    {id:'asgytdfats02',name:'王者农药'},
+    {id:'asgytdfats03',name:'红色警戒'},
+    {id:'asgytdfats04',name:'斗罗大陆'}
+  ])
+</script>
+```
+
+`Father.vue`父组件通过`v-slot="自己取名字"`可以获取所有的插槽数据对象，当然你也可以选择解构
+
+倘若遇到具名插槽的情况，可以使用`v-slot:插槽的名字="给传递过来的数据取名字"`或者`#插槽的名字="传递过来的数据取名字"`
+
+```vue
+<template>
+  <div class="father">
+    <h3>父组件</h3>
+    <div class="content">
+      <Game>
+        <template v-slot="params">
+          <ul>
+            <li v-for="y in params.youxi" :key="y.id">
+              {{ y.name }}
+            </li>
+          </ul>
+        </template>
+      </Game>
+
+      <Game>
+        <template v-slot="params">
+          <ol>
+            <li v-for="item in params.youxi" :key="item.id">
+              {{ item.name }}
+            </li>
+          </ol>
+        </template>
+      </Game>
+
+      <Game>
+        <template #default="{youxi}">
+          <h3 v-for="g in youxi" :key="g.id">{{ g.name }}</h3>
+        </template>
+      </Game>
+
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts" name="Father">
+  import Game from './Game.vue'
+</script>
+```
+
+### `shallowRef`和`shallowReactive`
+
+相较于普通的`ref`和`reactive`，`shallowRef`和`shallowReactive`的数据只有浅层数据是响应式数据，比如如下代码，如果使用`shallowRef`和`shallowReactive`，只有`person`和`car.brand`是响应式数据，对于`shallowRef`而言`变量名.value`后面不跟.的变量是响应式对象，对于`shallowReactive`,只有最表层的数据是响应式，当然`car`本身在`reactive`和`shallowReactive`是无法重新赋值的
+
+```ts
+let person = shallowRef({
+    name:'zhangsan',
+    hobby:{
+        sport:'pingpong'
+    }
+})
+
+let car = shallowReactive({
+    brand:'大众',
+    options:{
+        engine:'V8'
+    }
+})
+```
+
+### `readonly`
+
+使用`readonly`包裹的变量是只读变量，无法通过外部直接修改,比如`num`是响应式数据，可以直接修改值，但是`num2`无法通过函数直接修改它的值，如果`num`本身发生变化，`num2`也会变化
+
+```ts
+let num = ref(0)
+let num2 = readonly(sum)
+```
+
