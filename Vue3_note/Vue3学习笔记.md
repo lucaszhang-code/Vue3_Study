@@ -2,7 +2,7 @@
 
 ## 第一天
 
-### 基于vite创建Vue3项目
+### 基于Vite创建Vue3项目
 
 ![Vite脚手架选项](./assets/Vite脚手架选项.png)
  项目虽然使用TypeScript，但是任然可以使用JavaScript
@@ -3282,4 +3282,197 @@ let car = shallowReactive({
 let num = ref(0)
 let num2 = readonly(sum)
 ```
+
+## 第十三天
+
+### `toRaw`和`markRaw`
+
+`toRaw`是一个可以用于临时读取而不引起代理访问/跟踪开销，或是写入而不触发更改的特殊方法。不建议保存对原始对象的持久引用，请谨慎使用
+
+```ts
+const foo = {}
+const reactiveFoo = reactive(foo)
+
+console.log(toRaw(reactiveFoo) === foo) // true
+```
+
+`markRaw`将一个对象标记为不可被转为代理。返回该对象本身
+
+```ts
+const foo = markRaw({})
+console.log(isReactive(reactive(foo))) // false
+
+// 也适用于嵌套在其他响应性对象
+const bar = reactive({ foo })
+console.log(isReactive(bar.foo)) // false
+```
+
+### `customRef`自定义响应式
+
+一般的`ref`是实时更新数据，但是对于某些情况比如输入框，我们不想那么快去拿到输入框的最新内容，便于节约服务器的带宽，可以使用`customRef`自定义响应式
+
+我们将文件放在`hooks`文件夹里，并且给文件命名为`useMsgRef.ts`
+
+```ts
+import {customRef, ref} from 'vue'
+
+export default function (initValue : string, delay : number) {
+    let timer
+	// 使用vue提供的customRef定义响应式数据
+    let message = customRef((track, trigger) => {
+        return {
+            // message被读取时调用
+            get() {
+                track() // 告诉vue，message很重要，要进行持续关注，一旦message变化，就去更新
+                return initValue
+            },
+            // message被修改时调用
+            set(value) {
+                clearTimeout(timer)
+                timer = setTimeout(() => {
+                    initValue = value
+                    trigger() // 通知vue一下数据message变化了
+                }, delay)
+            }
+        }
+    })
+
+    return{message}
+}
+
+```
+
+在别的组件调用
+
+```ts
+// 使用messageRef来定义响应式数据，且有延迟
+let {message} = useMsgRef('你好', 1000)
+```
+
+### `teleport`
+
+`<Teleport>` 是一个内置组件，它可以将一个组件内部的一部分模板“传送”到该组件的 DOM 结构外层的位置去
+
+这是父组件，里面包了一个子组件
+
+```vue
+<template>
+  <div class="outer">
+    <h2>我是App资源</h2>
+    <img src="http://www.atguigu.com/images/index_new/logo.png" alt="">
+    <br>
+    <Modal></Modal>
+  </div>
+</template>
+
+<script setup lang="ts" name="App">
+import Modal from "@/Modal.vue";
+</script>
+```
+
+子组件里面包了一个弹窗，可以通过按钮控制开关
+
+值得注意的是，弹窗使用了`fixed`定位，应该是以整个body视图作为定位
+
+```vue
+<script setup lang="ts">
+import {ref} from 'vue'
+
+let isShow = ref(false)
+</script>
+
+<template>
+  <button @click="isShow = true">展示弹窗</button>
+	<!-- 弹窗部分 -->
+   <div v-show="isShow" class="modal">
+     <h2>我是弹窗的标题</h2>
+     <p>我是弹窗的内容</p>
+     <button @click="isShow = false">关闭弹窗</button>
+   </div>
+</template>
+
+<style scoped lang="less">
+.modal {
+  width: 200px;
+  height: 150px;
+  background-color: white;
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: 0 0 5px;
+  text-align: center;
+  position: fixed;
+  //left: 50%;
+  //margin-left: -100px;
+  left: calc(50% - 100px);
+  top: 20px;
+}
+</style>
+```
+
+但是一旦父组件使用了`filter: saturate(200%);`这个CSS属性，就会让弹窗以父组件为参照，不再按照视图居中
+
+只需要添加`<teleport>`即可,这样Vue在解析模版时就会将`teleport`里面包裹的内容放到合适的位置，`to="选择器(标签/class类/id类)"`
+
+```vue
+<template>
+  <button @click="isShow = true">展示弹窗</button>
+ <teleport to="body">
+   <div v-show="isShow" class="modal">
+     <h2>我是弹窗的标题</h2>
+     <p>我是弹窗的内容</p>
+     <button @click="isShow = false">关闭弹窗</button>
+   </div>
+ </teleport>
+</template>
+```
+
+### `Suspense`
+
+`Suspense`用于解决异步情况
+
+`Child.vue`子组件，需要通过`axios`获取请求，并将内容展示；由于`setup`语法糖，不需要写`async`
+
+```vue
+<script setup lang="ts">
+import {ref} from 'vue'
+import axios from 'axios'
+
+let sum = ref(0)
+let {data : {content}} = await axios.get('https://api.uomg.com/api/rand.qinghua')
+console.log(content)
+</script>
+
+<template>
+  <div class="child">
+    <h2>我是child组件</h2>
+    <h3>当前求和为：{{ sum }}</h3>
+  </div>
+</template>
+```
+
+使用`Suspense`包裹相应的组件，可以让网络请求完成后再显示相应的组件，避免画面缺失
+
+```vue
+<template>
+  <div class="app">
+    <h2>我是App组件</h2>
+    <Suspense>
+      <template #default>
+        <Child></Child>
+      </template>
+      <template #fallback>
+        <h2>等待中……</h2>
+      </template>
+    </Suspense>
+  </div>
+</template>
+
+<script setup lang="ts" name="App">
+import Child from "@/Child.vue";
+import {Suspense} from "vue";
+</script>
+```
+-- 完 --
+
+
 

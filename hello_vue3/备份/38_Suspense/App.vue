@@ -1,14 +1,20 @@
 <template>
   <div class="app">
     <h2>我是App组件</h2>
-    <h2>{{x}}</h2>
-    <Hello></Hello>
-    <Child></Child>
+    <Suspense>
+      <template #default>
+        <Child></Child>
+      </template>
+      <template #fallback>
+        <h2>等待中……</h2>
+      </template>
+    </Suspense>
   </div>
 </template>
 
 <script setup lang="ts" name="App">
 import Child from "@/Child.vue";
+import {Suspense} from "vue";
 </script>
 
 <style>

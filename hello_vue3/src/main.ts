@@ -1,17 +1,18 @@
 import {createApp} from 'vue'
 import App from './App.vue'
-import {createPinia} from 'pinia'
-import router from './router'
-// import emitter from "mitt";
+import Hello from './Hello.vue'
+import {valueOf} from "node";
 
 // 创建应用
 const app = createApp(App)
-// 创建pinia
-const pinia = createPinia()
 
-// 安装插件
-app.use(pinia)
-// 安装路由器
-app.use(router)
+app.component('Hello', Hello)
+app.config.globalProperties.x = 99
+
+app.directive('beauty', (element,{value}) => {
+    element.innerText += value
+    element.style.color = 'green'
+    element.style.backgroundColor = 'yellow'
+})
 // 挂载应用
 app.mount('#app')
